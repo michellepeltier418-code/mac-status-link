@@ -394,16 +394,24 @@ public class MainActivity extends Activity {
     private void useRecommendedStableEndpoint() {
         String endpoint = recommendedStableEndpoint == null ? "" : recommendedStableEndpoint.trim();
         if (endpoint.isEmpty()) {
+            updateConnection("No stable endpoint is available yet.", true);
             return;
         }
-        endpointInput.setText(endpoint);
-        configuredEndpoint = endpoint;
-        updateEndpointSummary();
-        saveSettingsFromInputs();
-        updateConnection("Stable endpoint saved. Checking now...", false);
-        startNotificationService();
-        fetchOnce();
-        startPolling();
+        String token = tokenInput.getText().toString().trim();
+        try {
+            requestStatus(endpoint, token);
+            endpointInput.setText(endpoint);
+            configuredEndpoint = endpoint;
+            updateEndpointSummary();
+            saveSettingsFromInputs();
+            updateConnection("Stable endpoint saved. Checking now...", false);
+            startNotificationService();
+            fetchOnce();
+            startPolling();
+            setConnectionDetailsVisible(false);
+        } catch (Exception error) {
+            updateConnection("Stable endpoint not ready: " + error.getMessage(), true);
+        }
     }
 
     private void requestNotificationPermissionIfNeeded() {
