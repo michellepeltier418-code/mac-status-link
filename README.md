@@ -67,7 +67,9 @@ The app refreshes every 2 seconds while open. On launch, it also checks the upda
 
 ## Notification Summary
 
-Version `1.2.0` starts a foreground notification service from the Android app. The notification shade shows battery, CPU, RAM, internet, and analysis summary, and it posts an alert if the Mac was previously reachable and then becomes unreachable.
+Version `1.3.0` starts a foreground notification service from the Android app. The notification shade shows battery, CPU, RAM, internet, and analysis summary, and it posts an alert if the Mac was previously reachable and then becomes unreachable.
+
+The Android app uses a colorful dashboard layout with a status header, tinted metric panels, and prominent update/refresh actions.
 
 The notification service also checks the update manifest every 15 minutes after a successful Mac status poll. When the manifest advertises a newer `latestVersionCode`, Android shows an update notification with an `Update` action.
 

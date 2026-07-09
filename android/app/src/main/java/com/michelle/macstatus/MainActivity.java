@@ -48,6 +48,13 @@ public class MainActivity extends Activity {
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
     private static final String GITHUB_MANIFEST_URL = "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json";
+    private static final int COLOR_INK = Color.rgb(17, 24, 39);
+    private static final int COLOR_MUTED = Color.rgb(82, 99, 118);
+    private static final int COLOR_BLUE = Color.rgb(37, 99, 235);
+    private static final int COLOR_TEAL = Color.rgb(13, 148, 136);
+    private static final int COLOR_AMBER = Color.rgb(217, 119, 6);
+    private static final int COLOR_ROSE = Color.rgb(225, 29, 72);
+    private static final int COLOR_GREEN = Color.rgb(22, 163, 74);
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private ScheduledExecutorService executor;
@@ -55,6 +62,7 @@ public class MainActivity extends Activity {
 
     private EditText endpointInput;
     private EditText tokenInput;
+    private TextView heroStatusText;
     private TextView connectionText;
     private TextView updatedText;
     private TextView batteryText;
@@ -107,24 +115,33 @@ public class MainActivity extends Activity {
     private void buildUi() {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(Color.rgb(246, 248, 250));
+        scrollView.setBackgroundColor(Color.rgb(232, 240, 255));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(18), dp(16), dp(24));
         scrollView.addView(root);
 
-        TextView title = text("Mac Status Link", 28, Color.rgb(23, 32, 42), Typeface.BOLD);
-        root.addView(title);
+        LinearLayout hero = heroPanel();
+        root.addView(hero);
 
-        TextView subtitle = text("Live MacBook battery, CPU, RAM, and internet status.", 14, Color.rgb(88, 101, 115), Typeface.NORMAL);
-        subtitle.setPadding(0, dp(4), 0, dp(16));
-        root.addView(subtitle);
+        TextView title = text("Mac Status Link", 30, Color.WHITE, Typeface.BOLD);
+        hero.addView(title);
 
-        LinearLayout config = panel();
-        root.addView(config);
+        TextView subtitle = text("Battery, CPU, RAM, internet, and update alerts in one live dashboard.", 14, Color.rgb(220, 238, 255), Typeface.NORMAL);
+        subtitle.setPadding(0, dp(6), 0, dp(14));
+        hero.addView(subtitle);
 
-        TextView configTitle = text("Connection", 18, Color.rgb(23, 32, 42), Typeface.BOLD);
+        heroStatusText = text("Waiting for your MacBook...", 18, Color.WHITE, Typeface.BOLD);
+        heroStatusText.setPadding(0, dp(8), 0, 0);
+        hero.addView(heroStatusText);
+
+        LinearLayout config = panel(Color.WHITE, Color.rgb(190, 205, 235));
+        LinearLayout.LayoutParams configParams = matchWrap();
+        configParams.topMargin = dp(14);
+        root.addView(config, configParams);
+
+        TextView configTitle = text("Connection", 18, COLOR_INK, Typeface.BOLD);
         config.addView(configTitle);
 
         endpointInput = new EditText(this);
@@ -150,6 +167,7 @@ public class MainActivity extends Activity {
         actions.setPadding(0, dp(10), 0, 0);
         Button saveButton = new Button(this);
         saveButton.setText("Save");
+        styleButton(saveButton, COLOR_BLUE, Color.WHITE);
         saveButton.setOnClickListener(view -> {
             saveSettingsFromInputs();
             updateConnection("Saved. Checking now...", false);
@@ -160,101 +178,135 @@ public class MainActivity extends Activity {
         });
         Button refreshButton = new Button(this);
         refreshButton.setText("Refresh");
+        styleButton(refreshButton, Color.rgb(219, 234, 254), COLOR_BLUE);
         refreshButton.setOnClickListener(view -> fetchOnce());
         actions.addView(refreshButton);
         actions.addView(saveButton);
         config.addView(actions);
 
-        connectionText = text("Not connected yet.", 14, Color.rgb(88, 101, 115), Typeface.NORMAL);
+        connectionText = text("Not connected yet.", 14, COLOR_MUTED, Typeface.NORMAL);
         connectionText.setPadding(0, dp(8), 0, 0);
         config.addView(connectionText);
 
-        updatedText = text("Last update: --", 13, Color.rgb(88, 101, 115), Typeface.NORMAL);
+        updatedText = text("Last update: --", 13, COLOR_MUTED, Typeface.NORMAL);
         updatedText.setPadding(0, dp(4), 0, 0);
         config.addView(updatedText);
 
         batteryBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        batteryText = addMetric(root, "Battery", batteryBar);
+        batteryText = addMetric(root, "Battery", batteryBar, Color.rgb(236, 253, 245), Color.rgb(20, 184, 166));
 
         cpuBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        cpuText = addMetric(root, "CPU", cpuBar);
+        cpuText = addMetric(root, "CPU", cpuBar, Color.rgb(239, 246, 255), COLOR_BLUE);
 
         memoryBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        memoryText = addMetric(root, "RAM", memoryBar);
+        memoryText = addMetric(root, "RAM", memoryBar, Color.rgb(255, 247, 237), COLOR_AMBER);
 
-        internetText = addSimple(root, "Internet");
-        networkText = addSimple(root, "Mac Network");
-        analysisText = addSimple(root, "Analysis");
+        internetText = addSimple(root, "Internet", Color.rgb(240, 253, 244), COLOR_GREEN);
+        networkText = addSimple(root, "Mac Network", Color.rgb(245, 243, 255), Color.rgb(124, 58, 237));
+        analysisText = addSimple(root, "Analysis", Color.rgb(255, 241, 242), COLOR_ROSE);
         updatesText = addUpdates(root);
 
         setContentView(scrollView);
     }
 
-    private TextView addMetric(LinearLayout root, String label, ProgressBar bar) {
-        LinearLayout card = panel();
+    private TextView addMetric(LinearLayout root, String label, ProgressBar bar, int fillColor, int accentColor) {
+        LinearLayout card = panel(fillColor, lighten(accentColor));
         LinearLayout.LayoutParams params = matchWrap();
         params.topMargin = dp(12);
         root.addView(card, params);
 
-        TextView title = text(label, 18, Color.rgb(23, 32, 42), Typeface.BOLD);
+        TextView title = text(label, 18, accentColor, Typeface.BOLD);
         card.addView(title);
 
-        TextView value = text("--", 16, Color.rgb(23, 32, 42), Typeface.NORMAL);
+        TextView value = text("--", 16, COLOR_INK, Typeface.BOLD);
         value.setPadding(0, dp(8), 0, dp(8));
         card.addView(value);
 
         bar.setMax(100);
         bar.setProgress(0);
+        if (Build.VERSION.SDK_INT >= 21) {
+            bar.getProgressDrawable().setTint(accentColor);
+        }
         card.addView(bar, matchWrap());
         return value;
     }
 
-    private TextView addSimple(LinearLayout root, String label) {
-        LinearLayout card = panel();
+    private TextView addSimple(LinearLayout root, String label, int fillColor, int accentColor) {
+        LinearLayout card = panel(fillColor, lighten(accentColor));
         LinearLayout.LayoutParams params = matchWrap();
         params.topMargin = dp(12);
         root.addView(card, params);
 
-        TextView title = text(label, 18, Color.rgb(23, 32, 42), Typeface.BOLD);
+        TextView title = text(label, 18, accentColor, Typeface.BOLD);
         card.addView(title);
 
-        TextView value = text("--", 16, Color.rgb(23, 32, 42), Typeface.NORMAL);
+        TextView value = text("--", 16, COLOR_INK, Typeface.NORMAL);
         value.setPadding(0, dp(8), 0, 0);
         card.addView(value);
         return value;
     }
 
     private TextView addUpdates(LinearLayout root) {
-        LinearLayout card = panel();
+        LinearLayout card = panel(Color.rgb(238, 242, 255), Color.rgb(165, 180, 252));
         LinearLayout.LayoutParams params = matchWrap();
         params.topMargin = dp(12);
         root.addView(card, params);
 
-        TextView title = text("Updates", 18, Color.rgb(23, 32, 42), Typeface.BOLD);
+        TextView title = text("Updates", 18, Color.rgb(79, 70, 229), Typeface.BOLD);
         card.addView(title);
 
-        TextView value = text("Manifest not checked yet.", 16, Color.rgb(23, 32, 42), Typeface.NORMAL);
+        TextView value = text("Manifest not checked yet.", 16, COLOR_INK, Typeface.NORMAL);
         value.setPadding(0, dp(8), 0, dp(8));
         card.addView(value);
 
         updatesButton = new Button(this);
         updatesButton.setText("Check Updates");
+        styleButton(updatesButton, Color.rgb(79, 70, 229), Color.WHITE);
         updatesButton.setOnClickListener(view -> fetchManifestOnce());
         card.addView(updatesButton);
 
         return value;
     }
 
-    private LinearLayout panel() {
+    private LinearLayout heroPanel() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(18), dp(18), dp(18));
+        GradientDrawable background = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(37, 99, 235), Color.rgb(13, 148, 136)}
+        );
+        background.setCornerRadius(dp(8));
+        panel.setBackground(background);
+        return panel;
+    }
+
+    private LinearLayout panel(int fillColor, int strokeColor) {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(14), dp(14), dp(14), dp(14));
         GradientDrawable background = new GradientDrawable();
-        background.setColor(Color.WHITE);
+        background.setColor(fillColor);
         background.setCornerRadius(dp(8));
-        background.setStroke(dp(1), Color.rgb(215, 222, 232));
+        background.setStroke(dp(1), strokeColor);
         panel.setBackground(background);
         return panel;
+    }
+
+    private void styleButton(Button button, int fillColor, int textColor) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(fillColor);
+        background.setCornerRadius(dp(8));
+        button.setTextColor(textColor);
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setBackground(background);
+    }
+
+    private int lighten(int color) {
+        int red = Math.min(255, (int) (Color.red(color) + (255 - Color.red(color)) * 0.72));
+        int green = Math.min(255, (int) (Color.green(color) + (255 - Color.green(color)) * 0.72));
+        int blue = Math.min(255, (int) (Color.blue(color) + (255 - Color.blue(color)) * 0.72));
+        return Color.rgb(red, green, blue);
     }
 
     private TextView text(String value, int sp, int color, int style) {
@@ -386,15 +438,14 @@ public class MainActivity extends Activity {
         String endpoint = configuredEndpoint;
         String token = configuredToken;
 
-        if (endpoint.isEmpty()) {
-            mainHandler.post(() -> updatesText.setText("Enter the Mac endpoint before checking updates."));
-            return;
-        }
-
         try {
             JSONObject manifest = requestPublicJson(GITHUB_MANIFEST_URL);
             mainHandler.post(() -> renderManifest(manifest));
         } catch (Exception error) {
+            if (endpoint.isEmpty()) {
+                mainHandler.post(() -> updatesText.setText("GitHub manifest check failed: " + error.getMessage()));
+                return;
+            }
             try {
                 JSONObject manifest = requestJson(endpoint, token, "/api/manifest");
                 mainHandler.post(() -> renderManifest(manifest));
@@ -467,6 +518,7 @@ public class MainActivity extends Activity {
     private void renderStatus(JSONObject json) {
         updateConnection("Connected to " + json.optString("hostname", "MacBook"), false);
         updatedText.setText("Last update: " + json.optString("timestamp", "--"));
+        heroStatusText.setText("Connected to " + json.optString("hostname", "MacBook"));
 
         JSONObject battery = json.optJSONObject("battery");
         if (battery != null && battery.optBoolean("present", false)) {
@@ -523,12 +575,14 @@ public class MainActivity extends Activity {
             updatesText.setText("Update available: " + versionName + "\n" + apkUrl);
             updatesText.setTextColor(Color.rgb(172, 109, 32));
             updatesButton.setText("Update");
+            styleButton(updatesButton, COLOR_GREEN, Color.WHITE);
             updatesButton.setOnClickListener(view -> UpdateInstaller.startDownload(this, apkUrl));
             showUpdateDialog(versionName, apkUrl);
         } else {
             updatesText.setText("Up to date: " + versionName + "\nManifest APK: " + apkUrl);
             updatesText.setTextColor(Color.rgb(35, 117, 77));
             updatesButton.setText("Check Updates");
+            styleButton(updatesButton, Color.rgb(79, 70, 229), Color.WHITE);
             updatesButton.setOnClickListener(view -> fetchManifestOnce());
         }
     }
@@ -601,7 +655,10 @@ public class MainActivity extends Activity {
 
     private void updateConnection(String message, boolean error) {
         connectionText.setText(message);
-        connectionText.setTextColor(error ? Color.rgb(172, 40, 40) : Color.rgb(35, 117, 77));
+        connectionText.setTextColor(error ? COLOR_ROSE : COLOR_GREEN);
+        if (heroStatusText != null && error) {
+            heroStatusText.setText("Connection needs attention");
+        }
     }
 
     private int dp(int value) {
