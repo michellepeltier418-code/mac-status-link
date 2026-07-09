@@ -3,9 +3,9 @@
   "packageName": "com.michelle.macstatus",
   "latestVersionCode": 5,
   "latestVersionName": "1.3.0",
-  "manifestUrl": "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json",
-  "apkUrl": "https://github.com/michellepeltier418-code/mac-status-link/releases/download/v1.3.0/MacStatusLink.apk",
-  "sha256": "7e6f5b8392b9266eb17ebb0bbcf3ad297eaa785b603bfd367ed81d4ed202df9c",
+  "manifestUrl": "https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main",
+  "apkUrl": "https://github.com/michellepeltier418-code/mac-status-link/releases/download/v1.3.0/MacStatusLink-1.3.0.apk",
+  "sha256": "cd4099109ce19790559f61008ddcda0536f974f95051c96d4792ecbf8a888fc1",
   "releaseNotes": [
     "Adds a live notification shade summary for battery, CPU, RAM, internet, and analysis.",
     "Adds an offline alert when the phone can no longer reach the Mac after a successful connection.",

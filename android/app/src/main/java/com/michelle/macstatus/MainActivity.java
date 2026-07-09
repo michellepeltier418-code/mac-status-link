@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
     private static final String PREFS = "mac_status_link";
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
-    private static final String GITHUB_MANIFEST_URL = "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json";
+    private static final String GITHUB_MANIFEST_URL = "https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main";
     private static final int COLOR_INK = Color.rgb(17, 24, 39);
     private static final int COLOR_MUTED = Color.rgb(82, 99, 118);
     private static final int COLOR_BLUE = Color.rgb(37, 99, 235);
@@ -460,7 +460,7 @@ public class MainActivity extends Activity {
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("Accept", "application/vnd.github.raw+json");
 
         int statusCode = connection.getResponseCode();
         InputStream stream = statusCode >= 200 && statusCode < 400

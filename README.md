@@ -84,10 +84,10 @@ http://<mac-endpoint>:5178/api/manifest
 The manifest drives in-app updates. Version `1.2.1` and newer check the GitHub-hosted manifest first:
 
 ```text
-https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json
+https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main
 ```
 
-The Mac `/api/manifest` endpoint remains as a fallback for older installed versions and local testing. APK release files are attached to GitHub Releases.
+The app requests that URL with GitHub's raw-content media type so it receives the manifest JSON directly. The Mac `/api/manifest` endpoint remains as a fallback for older installed versions and local testing. APK release files are attached to GitHub Releases.
 
 If a newer APK is listed, the app shows an in-app update popup and changes the Updates card button to `Update`. Pressing `Update` downloads the APK and opens Android's installer. Android may ask once to allow this app to install unknown apps.
 

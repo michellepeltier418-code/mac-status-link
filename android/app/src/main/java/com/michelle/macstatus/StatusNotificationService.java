@@ -35,7 +35,7 @@ public class StatusNotificationService extends Service {
     private static final String PREFS = "mac_status_link";
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
-    private static final String GITHUB_MANIFEST_URL = "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json";
+    private static final String GITHUB_MANIFEST_URL = "https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main";
     private static final String CHANNEL_STATUS = "mac_status_summary";
     private static final String CHANNEL_ALERTS = "mac_status_alerts";
     private static final String CHANNEL_UPDATES = "mac_status_updates";
@@ -177,7 +177,7 @@ public class StatusNotificationService extends Service {
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("Accept", "application/vnd.github.raw+json");
 
         int statusCode = connection.getResponseCode();
         InputStream stream = statusCode >= 200 && statusCode < 400 ? connection.getInputStream() : connection.getErrorStream();
