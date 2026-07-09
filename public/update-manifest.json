@@ -1,17 +1,19 @@
 {
   "appName": "Mac Status Link",
   "packageName": "com.michelle.macstatus",
-  "latestVersionCode": 3,
-  "latestVersionName": "1.2.0",
-  "apkUrl": "https://tmpfiles.org/dl/1783563804.5089c7f94a131096/wYw13KYxZH6T/macstatuslink.apk",
-  "sha256": "28474dbae98f658572d7884d93f051a387732675c063ca4ae754ab7fb2036d63",
+  "latestVersionCode": 4,
+  "latestVersionName": "1.2.1",
+  "manifestUrl": "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json",
+  "apkUrl": "https://github.com/michellepeltier418-code/mac-status-link/releases/download/v1.2.1/MacStatusLink.apk",
+  "sha256": "cfc0a322a1edc7320d801bc93aa1f54c085e99a6d67424fe9b287a62aa04ce3a",
   "releaseNotes": [
     "Adds a live notification shade summary for battery, CPU, RAM, internet, and analysis.",
     "Adds an offline alert when the phone can no longer reach the Mac after a successful connection.",
     "Adds a Mac companion app and live update manifest endpoint.",
     "Adds automatic manifest checks on app launch and from the background notification service.",
     "Adds update notifications with an Update action.",
-    "Adds in-app update popup and APK download/install flow."
+    "Adds in-app update popup and APK download/install flow.",
+    "Moves APK releases and the canonical update manifest to GitHub."
   ],
   "publishedAt": "2026-07-08T00:00:00-07:00"
 }

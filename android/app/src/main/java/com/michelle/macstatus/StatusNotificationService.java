@@ -35,6 +35,7 @@ public class StatusNotificationService extends Service {
     private static final String PREFS = "mac_status_link";
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
+    private static final String GITHUB_MANIFEST_URL = "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json";
     private static final String CHANNEL_STATUS = "mac_status_summary";
     private static final String CHANNEL_ALERTS = "mac_status_alerts";
     private static final String CHANNEL_UPDATES = "mac_status_updates";
@@ -153,7 +154,12 @@ public class StatusNotificationService extends Service {
         lastUpdateCheckMs = now;
 
         try {
-            JSONObject manifest = requestJson(endpoint, token, "/api/manifest");
+            JSONObject manifest;
+            try {
+                manifest = requestPublicJson(GITHUB_MANIFEST_URL);
+            } catch (Exception error) {
+                manifest = requestJson(endpoint, token, "/api/manifest");
+            }
             int latestCode = manifest.optInt("latestVersionCode", 0);
             String versionName = manifest.optString("latestVersionName", "unknown");
             String apkUrl = manifest.optString("apkUrl", "");
@@ -164,6 +170,24 @@ public class StatusNotificationService extends Service {
         } catch (Exception ignored) {
             // Status polling should remain useful even if update metadata is temporarily unavailable.
         }
+    }
+
+    private JSONObject requestPublicJson(String urlValue) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlValue).openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", "application/json");
+
+        int statusCode = connection.getResponseCode();
+        InputStream stream = statusCode >= 200 && statusCode < 400 ? connection.getInputStream() : connection.getErrorStream();
+        String body = readAll(stream);
+        connection.disconnect();
+
+        if (statusCode < 200 || statusCode >= 400) {
+            throw new IllegalStateException("GitHub manifest returned HTTP " + statusCode + ".");
+        }
+        return new JSONObject(body);
     }
 
     private JSONObject requestJson(String endpoint, String token, String path) throws Exception {

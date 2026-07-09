@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
     private static final String PREFS = "mac_status_link";
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
+    private static final String GITHUB_MANIFEST_URL = "https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json";
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private ScheduledExecutorService executor;
@@ -391,11 +392,37 @@ public class MainActivity extends Activity {
         }
 
         try {
-            JSONObject manifest = requestJson(endpoint, token, "/api/manifest");
+            JSONObject manifest = requestPublicJson(GITHUB_MANIFEST_URL);
             mainHandler.post(() -> renderManifest(manifest));
         } catch (Exception error) {
-            mainHandler.post(() -> updatesText.setText("Manifest check failed: " + error.getMessage()));
+            try {
+                JSONObject manifest = requestJson(endpoint, token, "/api/manifest");
+                mainHandler.post(() -> renderManifest(manifest));
+            } catch (Exception fallbackError) {
+                mainHandler.post(() -> updatesText.setText("Manifest check failed: " + fallbackError.getMessage()));
+            }
         }
+    }
+
+    private JSONObject requestPublicJson(String urlValue) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlValue).openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", "application/json");
+
+        int statusCode = connection.getResponseCode();
+        InputStream stream = statusCode >= 200 && statusCode < 400
+                ? connection.getInputStream()
+                : connection.getErrorStream();
+        String body = readAll(stream);
+        connection.disconnect();
+
+        if (statusCode < 200 || statusCode >= 400) {
+            throw new IllegalStateException("GitHub manifest returned HTTP " + statusCode + ".");
+        }
+
+        return new JSONObject(body);
     }
 
     private JSONObject requestJson(String endpoint, String token, String path) throws Exception {

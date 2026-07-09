@@ -79,7 +79,15 @@ The live manifest file is `public/update-manifest.json`. When the Mac service is
 http://<mac-endpoint>:5178/api/manifest
 ```
 
-The manifest drives in-app updates. If a newer APK is listed, the app shows an in-app update popup and changes the Updates card button to `Update`. Pressing `Update` downloads the APK and opens Android's installer. Android may ask once to allow this app to install unknown apps.
+The manifest drives in-app updates. Version `1.2.1` and newer check the GitHub-hosted manifest first:
+
+```text
+https://raw.githubusercontent.com/michellepeltier418-code/mac-status-link/main/public/update-manifest.json
+```
+
+The Mac `/api/manifest` endpoint remains as a fallback for older installed versions and local testing. APK release files are attached to GitHub Releases.
+
+If a newer APK is listed, the app shows an in-app update popup and changes the Updates card button to `Update`. Pressing `Update` downloads the APK and opens Android's installer. Android may ask once to allow this app to install unknown apps.
 
 ## Mac Companion App
 
