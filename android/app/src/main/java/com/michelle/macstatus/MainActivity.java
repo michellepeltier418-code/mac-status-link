@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
     private LinearLayout connectionDetails;
     private TextView endpointSummaryText;
     private TextView stableEndpointText;
+    private LinearLayout stableEndpointButtons;
     private Button editConnectionButton;
     private Button saveConnectionButton;
     private Button useStableEndpointButton;
@@ -159,6 +160,11 @@ public class MainActivity extends Activity {
         stableEndpointText = text("Stable endpoint: not detected yet.", 13, COLOR_MUTED, Typeface.NORMAL);
         stableEndpointText.setPadding(0, 0, 0, dp(8));
         config.addView(stableEndpointText);
+
+        stableEndpointButtons = new LinearLayout(this);
+        stableEndpointButtons.setOrientation(LinearLayout.VERTICAL);
+        stableEndpointButtons.setVisibility(View.GONE);
+        config.addView(stableEndpointButtons);
 
         connectionDetails = new LinearLayout(this);
         connectionDetails.setOrientation(LinearLayout.VERTICAL);
@@ -713,6 +719,7 @@ public class MainActivity extends Activity {
     private void renderStableEndpoint(JSONObject network) {
         String recommended = network == null ? "" : network.optString("recommendedEndpoint", "");
         recommendedStableEndpoint = recommended == null ? "" : recommended.trim();
+        renderStableEndpointChoices(network);
 
         if (recommendedStableEndpoint.isEmpty()) {
             stableEndpointText.setText("Stable endpoint: not detected. Use Tailscale or MAC_STATUS_PUBLIC_URL for away-from-laptop access.");
@@ -727,6 +734,71 @@ public class MainActivity extends Activity {
         if (useStableEndpointButton != null) {
             useStableEndpointButton.setVisibility(alreadyUsing ? View.GONE : View.VISIBLE);
         }
+    }
+
+    private void renderStableEndpointChoices(JSONObject network) {
+        stableEndpointButtons.removeAllViews();
+        JSONArray stableEndpoints = network == null ? null : network.optJSONArray("stableEndpoints");
+        JSONArray addresses = network == null ? null : network.optJSONArray("addresses");
+        if ((stableEndpoints == null || stableEndpoints.length() == 0) && (addresses == null || addresses.length() == 0)) {
+            stableEndpointButtons.setVisibility(View.GONE);
+            return;
+        }
+
+        TextView label = text("Select a stable endpoint", 13, COLOR_MUTED, Typeface.BOLD);
+        label.setPadding(0, 0, 0, dp(6));
+        stableEndpointButtons.addView(label);
+
+        for (int i = 0; i < stableEndpoints.length(); i++) {
+            JSONObject entry = stableEndpoints.optJSONObject(i);
+            if (entry == null) {
+                continue;
+            }
+            String url = entry.optString("url", "").trim();
+            if (url.isEmpty()) {
+                continue;
+            }
+            String title = entry.optString("label", "Stable endpoint");
+            String note = entry.optString("note", "");
+            Button button = new Button(this);
+            button.setAllCaps(false);
+            button.setText(title + "\n" + url + (note.isEmpty() ? "" : "\n" + note));
+            styleButton(button, Color.rgb(236, 253, 245), COLOR_GREEN);
+            LinearLayout.LayoutParams params = matchWrap();
+            params.topMargin = dp(6);
+            button.setOnClickListener(view -> applyStableEndpoint(url));
+            stableEndpointButtons.addView(button, params);
+        }
+
+        for (int i = 0; i < addresses.length(); i++) {
+            JSONObject entry = addresses.optJSONObject(i);
+            if (entry == null) {
+                continue;
+            }
+            String ip = entry.optString("address", "").trim();
+            if (ip.isEmpty()) {
+                continue;
+            }
+            String name = entry.optString("name", "network");
+            Button button = new Button(this);
+            button.setAllCaps(false);
+            button.setText("Last used Mac IP\nhttp://" + ip + ":" + 5178 + "\n" + name);
+            styleButton(button, Color.rgb(239, 246, 255), COLOR_BLUE);
+            LinearLayout.LayoutParams params = matchWrap();
+            params.topMargin = dp(6);
+            button.setOnClickListener(view -> applyStableEndpoint("http://" + ip + ":" + 5178));
+            stableEndpointButtons.addView(button, params);
+        }
+
+        stableEndpointButtons.setVisibility(View.VISIBLE);
+    }
+
+    private void applyStableEndpoint(String endpoint) {
+        if (endpoint == null || endpoint.trim().isEmpty()) {
+            return;
+        }
+        recommendedStableEndpoint = endpoint.trim();
+        useRecommendedStableEndpoint();
     }
 
     private String joinMessages(JSONArray messages) {
