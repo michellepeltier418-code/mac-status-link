@@ -62,6 +62,10 @@ public class MainActivity extends Activity {
 
     private EditText endpointInput;
     private EditText tokenInput;
+    private LinearLayout connectionDetails;
+    private TextView endpointSummaryText;
+    private Button editConnectionButton;
+    private Button saveConnectionButton;
     private TextView heroStatusText;
     private TextView connectionText;
     private TextView updatedText;
@@ -78,6 +82,7 @@ public class MainActivity extends Activity {
     private ProgressBar memoryBar;
     private volatile String configuredEndpoint = "";
     private volatile String configuredToken = "";
+    private boolean connectionDetailsVisible;
 
     private final DecimalFormat oneDecimal = new DecimalFormat("0.0");
 
@@ -144,13 +149,22 @@ public class MainActivity extends Activity {
         TextView configTitle = text("Connection", 18, COLOR_INK, Typeface.BOLD);
         config.addView(configTitle);
 
+        endpointSummaryText = text("Endpoint: not set", 15, COLOR_MUTED, Typeface.BOLD);
+        endpointSummaryText.setPadding(0, dp(8), 0, dp(8));
+        config.addView(endpointSummaryText);
+
+        connectionDetails = new LinearLayout(this);
+        connectionDetails.setOrientation(LinearLayout.VERTICAL);
+        connectionDetails.setVisibility(View.GONE);
+        config.addView(connectionDetails);
+
         endpointInput = new EditText(this);
         endpointInput.setSingleLine(true);
         endpointInput.setHint("http://your-mac-ip:5178 or https://your-tunnel");
         endpointInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         endpointInput.setTextSize(14);
         endpointInput.setPadding(dp(10), 0, dp(10), 0);
-        config.addView(endpointInput, matchWrap());
+        connectionDetails.addView(endpointInput, matchWrap());
 
         tokenInput = new EditText(this);
         tokenInput.setSingleLine(true);
@@ -160,28 +174,34 @@ public class MainActivity extends Activity {
         tokenInput.setPadding(dp(10), 0, dp(10), 0);
         LinearLayout.LayoutParams tokenParams = matchWrap();
         tokenParams.topMargin = dp(8);
-        config.addView(tokenInput, tokenParams);
+        connectionDetails.addView(tokenInput, tokenParams);
 
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.END);
         actions.setPadding(0, dp(10), 0, 0);
-        Button saveButton = new Button(this);
-        saveButton.setText("Save");
-        styleButton(saveButton, COLOR_BLUE, Color.WHITE);
-        saveButton.setOnClickListener(view -> {
+        saveConnectionButton = new Button(this);
+        saveConnectionButton.setText("Save");
+        styleButton(saveConnectionButton, COLOR_BLUE, Color.WHITE);
+        saveConnectionButton.setOnClickListener(view -> {
             saveSettingsFromInputs();
             updateConnection("Saved. Checking now...", false);
             startNotificationService();
             fetchOnce();
             fetchManifestOnce();
             startPolling();
+            setConnectionDetailsVisible(false);
         });
         Button refreshButton = new Button(this);
         refreshButton.setText("Refresh");
         styleButton(refreshButton, Color.rgb(219, 234, 254), COLOR_BLUE);
         refreshButton.setOnClickListener(view -> fetchOnce());
+        editConnectionButton = new Button(this);
+        editConnectionButton.setText("Edit Connection");
+        styleButton(editConnectionButton, Color.rgb(240, 253, 250), COLOR_TEAL);
+        editConnectionButton.setOnClickListener(view -> setConnectionDetailsVisible(!connectionDetailsVisible));
         actions.addView(refreshButton);
-        actions.addView(saveButton);
+        actions.addView(editConnectionButton);
+        actions.addView(saveConnectionButton);
         config.addView(actions);
 
         connectionText = text("Not connected yet.", 14, COLOR_MUTED, Typeface.NORMAL);
@@ -332,6 +352,30 @@ public class MainActivity extends Activity {
         configuredToken = prefs.getString(KEY_TOKEN, "");
         endpointInput.setText(configuredEndpoint);
         tokenInput.setText(configuredToken);
+        updateEndpointSummary();
+        setConnectionDetailsVisible(configuredEndpoint.trim().isEmpty() || configuredToken.trim().isEmpty());
+    }
+
+    private void setConnectionDetailsVisible(boolean visible) {
+        connectionDetailsVisible = visible;
+        if (connectionDetails != null) {
+            connectionDetails.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+        if (editConnectionButton != null) {
+            editConnectionButton.setText(visible ? "Hide Details" : "Edit Connection");
+        }
+        if (saveConnectionButton != null) {
+            saveConnectionButton.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void updateEndpointSummary() {
+        String endpoint = configuredEndpoint == null ? "" : configuredEndpoint.trim();
+        if (endpoint.isEmpty()) {
+            endpointSummaryText.setText("Endpoint: not set");
+            return;
+        }
+        endpointSummaryText.setText("Endpoint: " + endpoint);
     }
 
     private void requestNotificationPermissionIfNeeded() {
@@ -352,6 +396,7 @@ public class MainActivity extends Activity {
     private void saveSettingsFromInputs() {
         configuredEndpoint = endpointInput.getText().toString().trim();
         configuredToken = tokenInput.getText().toString().trim();
+        updateEndpointSummary();
         getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY_ENDPOINT, configuredEndpoint)

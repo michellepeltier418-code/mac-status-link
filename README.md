@@ -73,6 +73,8 @@ The Android app uses a colorful dashboard layout with a status header, tinted me
 
 Version `1.3.1` expands the Analysis card. It keeps the short health summary at the top, then lists the top CPU and RAM processes reported by the Mac status service.
 
+Version `1.3.2` keeps the Connection card compact by default. It shows the saved endpoint and status, while the endpoint and token fields stay hidden unless `Edit Connection` is opened.
+
 The notification service also checks the update manifest every 15 minutes after a successful Mac status poll. When the manifest advertises a newer `latestVersionCode`, Android shows an update notification with an `Update` action.
 
 ## Update Manifest
