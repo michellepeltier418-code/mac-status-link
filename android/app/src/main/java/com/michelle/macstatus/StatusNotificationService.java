@@ -8,6 +8,8 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.IBinder;
@@ -35,14 +37,19 @@ public class StatusNotificationService extends Service {
     private static final String KEY_TOKEN = "token";
     private static final String CHANNEL_STATUS = "mac_status_summary";
     private static final String CHANNEL_ALERTS = "mac_status_alerts";
+    private static final String CHANNEL_UPDATES = "mac_status_updates";
     private static final int NOTIFICATION_STATUS_ID = 1001;
     private static final int NOTIFICATION_OFFLINE_ID = 1002;
+    private static final int NOTIFICATION_UPDATE_ID = 1003;
+    private static final long UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000L;
 
     private final DecimalFormat oneDecimal = new DecimalFormat("0");
     private ScheduledExecutorService executor;
     private ScheduledFuture<?> poller;
     private boolean hasConnected;
     private boolean offlineAlertShown;
+    private long lastUpdateCheckMs;
+    private int lastNotifiedVersionCode;
 
     @Override
     public void onCreate() {
@@ -102,6 +109,7 @@ public class StatusNotificationService extends Service {
             hasConnected = true;
             offlineAlertShown = false;
             updateStatus("MacBook online", summaryLine(status), detailLine(status));
+            maybeCheckManifest(endpoint, token);
         } catch (Exception error) {
             updateStatus("MacBook unreachable", "Last check failed", error.getMessage());
             if (hasConnected && !offlineAlertShown) {
@@ -131,6 +139,49 @@ public class StatusNotificationService extends Service {
         if (statusCode == 401) {
             throw new IllegalStateException("Token rejected by Mac status service.");
         }
+        if (statusCode < 200 || statusCode >= 400) {
+            throw new IllegalStateException("Server returned HTTP " + statusCode + ".");
+        }
+        return new JSONObject(body);
+    }
+
+    private void maybeCheckManifest(String endpoint, String token) {
+        long now = System.currentTimeMillis();
+        if (now - lastUpdateCheckMs < UPDATE_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastUpdateCheckMs = now;
+
+        try {
+            JSONObject manifest = requestJson(endpoint, token, "/api/manifest");
+            int latestCode = manifest.optInt("latestVersionCode", 0);
+            String versionName = manifest.optString("latestVersionName", "unknown");
+            String apkUrl = manifest.optString("apkUrl", "");
+            if (latestCode > currentVersionCode() && latestCode != lastNotifiedVersionCode) {
+                lastNotifiedVersionCode = latestCode;
+                notifyUpdate(versionName, apkUrl);
+            }
+        } catch (Exception ignored) {
+            // Status polling should remain useful even if update metadata is temporarily unavailable.
+        }
+    }
+
+    private JSONObject requestJson(String endpoint, String token, String path) throws Exception {
+        String cleanEndpoint = endpoint.endsWith("/") ? endpoint.substring(0, endpoint.length() - 1) : endpoint;
+        HttpURLConnection connection = (HttpURLConnection) new URL(cleanEndpoint + path).openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", "application/json");
+        if (!token.isEmpty()) {
+            connection.setRequestProperty("Authorization", "Bearer " + token);
+        }
+
+        int statusCode = connection.getResponseCode();
+        InputStream stream = statusCode >= 200 && statusCode < 400 ? connection.getInputStream() : connection.getErrorStream();
+        String body = readAll(stream);
+        connection.disconnect();
+
         if (statusCode < 200 || statusCode >= 400) {
             throw new IllegalStateException("Server returned HTTP " + statusCode + ".");
         }
@@ -209,6 +260,47 @@ public class StatusNotificationService extends Service {
         manager.notify(NOTIFICATION_OFFLINE_ID, notification);
     }
 
+    private void notifyUpdate(String versionName, String apkUrl) {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra("install_update", true);
+        intent.putExtra("apk_url", apkUrl);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                2,
+                intent,
+                Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL_UPDATES)
+                : new Notification.Builder(this);
+
+        Notification notification = builder
+                .setContentTitle("Mac Status Link update available")
+                .setContentText("Version " + versionName + " is ready to install.")
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentIntent(pendingIntent)
+                .addAction(android.R.drawable.stat_sys_download_done, "Update", pendingIntent)
+                .setAutoCancel(true)
+                .setShowWhen(true)
+                .build();
+
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.notify(NOTIFICATION_UPDATE_ID, notification);
+    }
+
+    private long currentVersionCode() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                return info.getLongVersionCode();
+            }
+            return info.versionCode;
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return 0;
+        }
+    }
+
     private Notification buildNotification(String channelId, String title, String text, String bigText, boolean ongoing) {
         Intent intent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -260,7 +352,16 @@ public class StatusNotificationService extends Service {
         alerts.setDescription("Alerts when the MacBook status service becomes unreachable.");
         alerts.setLightColor(Color.rgb(172, 40, 40));
 
+        NotificationChannel updates = new NotificationChannel(
+                CHANNEL_UPDATES,
+                "Mac Status Link updates",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        updates.setDescription("Notifications when a newer APK is available from the update manifest.");
+        updates.setLightColor(Color.rgb(35, 117, 77));
+
         manager.createNotificationChannel(status);
         manager.createNotificationChannel(alerts);
+        manager.createNotificationChannel(updates);
     }
 }

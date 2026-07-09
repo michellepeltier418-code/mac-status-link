@@ -63,11 +63,13 @@ scripts/upload-apk-temp.sh
 5. Enter the token from `.mac-status-token`.
 6. Tap Save.
 
-The app refreshes every 2 seconds while open.
+The app refreshes every 2 seconds while open. On launch, it also checks the update manifest.
 
 ## Notification Summary
 
-Version `1.1.0` starts a foreground notification service from the Android app. The notification shade shows battery, CPU, RAM, internet, and analysis summary, and it posts an alert if the Mac was previously reachable and then becomes unreachable.
+Version `1.2.0` starts a foreground notification service from the Android app. The notification shade shows battery, CPU, RAM, internet, and analysis summary, and it posts an alert if the Mac was previously reachable and then becomes unreachable.
+
+The notification service also checks the update manifest every 15 minutes after a successful Mac status poll. When the manifest advertises a newer `latestVersionCode`, Android shows an update notification with an `Update` action.
 
 ## Update Manifest
 
@@ -76,6 +78,8 @@ The live manifest file is `public/update-manifest.json`. When the Mac service is
 ```text
 http://<mac-endpoint>:5178/api/manifest
 ```
+
+The manifest drives in-app updates. If a newer APK is listed, the app shows an in-app update popup and changes the Updates card button to `Update`. Pressing `Update` downloads the APK and opens Android's installer. Android may ask once to allow this app to install unknown apps.
 
 ## Mac Companion App
 

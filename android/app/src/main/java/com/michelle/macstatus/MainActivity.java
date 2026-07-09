@@ -1,6 +1,7 @@
 package com.michelle.macstatus;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -62,6 +63,7 @@ public class MainActivity extends Activity {
     private TextView networkText;
     private TextView analysisText;
     private TextView updatesText;
+    private Button updatesButton;
     private ProgressBar batteryBar;
     private ProgressBar cpuBar;
     private ProgressBar memoryBar;
@@ -76,9 +78,18 @@ public class MainActivity extends Activity {
         executor = Executors.newSingleThreadScheduledExecutor();
         buildUi();
         loadSettings();
+        handleUpdateIntent(getIntent());
         requestNotificationPermissionIfNeeded();
         startNotificationService();
         startPolling();
+        fetchManifestOnce();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleUpdateIntent(intent);
     }
 
     @Override
@@ -225,10 +236,10 @@ public class MainActivity extends Activity {
         value.setPadding(0, dp(8), 0, dp(8));
         card.addView(value);
 
-        Button button = new Button(this);
-        button.setText("Check Updates");
-        button.setOnClickListener(view -> fetchManifestOnce());
-        card.addView(button);
+        updatesButton = new Button(this);
+        updatesButton.setText("Check Updates");
+        updatesButton.setOnClickListener(view -> fetchManifestOnce());
+        card.addView(updatesButton);
 
         return value;
     }
@@ -308,6 +319,16 @@ public class MainActivity extends Activity {
 
     private void fetchManifestOnce() {
         executor.execute(this::fetchManifest);
+    }
+
+    private void handleUpdateIntent(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra("install_update", false)) {
+            return;
+        }
+        String apkUrl = intent.getStringExtra("apk_url");
+        if (apkUrl != null && !apkUrl.trim().isEmpty()) {
+            UpdateInstaller.startDownload(this, apkUrl);
+        }
     }
 
     private void fetchStatus() {
@@ -474,10 +495,24 @@ public class MainActivity extends Activity {
         if (latestCode > currentVersionCode()) {
             updatesText.setText("Update available: " + versionName + "\n" + apkUrl);
             updatesText.setTextColor(Color.rgb(172, 109, 32));
+            updatesButton.setText("Update");
+            updatesButton.setOnClickListener(view -> UpdateInstaller.startDownload(this, apkUrl));
+            showUpdateDialog(versionName, apkUrl);
         } else {
             updatesText.setText("Up to date: " + versionName + "\nManifest APK: " + apkUrl);
             updatesText.setTextColor(Color.rgb(35, 117, 77));
+            updatesButton.setText("Check Updates");
+            updatesButton.setOnClickListener(view -> fetchManifestOnce());
         }
+    }
+
+    private void showUpdateDialog(String versionName, String apkUrl) {
+        new AlertDialog.Builder(this)
+                .setTitle("Update available")
+                .setMessage("Mac Status Link " + versionName + " is ready to install.")
+                .setPositiveButton("Update", (dialog, which) -> UpdateInstaller.startDownload(this, apkUrl))
+                .setNegativeButton("Later", null)
+                .show();
     }
 
     private long currentVersionCode() {
