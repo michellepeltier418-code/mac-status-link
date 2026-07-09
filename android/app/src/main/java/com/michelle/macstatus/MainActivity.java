@@ -561,7 +561,8 @@ public class MainActivity extends Activity {
         JSONObject analysis = json.optJSONObject("analysis");
         if (analysis != null) {
             String level = analysis.optString("level", "ok").toUpperCase(Locale.US);
-            analysisText.setText(level + ": " + joinMessages(analysis.optJSONArray("messages")));
+            analysisText.setText(level + ": " + joinMessages(analysis.optJSONArray("messages")) +
+                    processSummary(json.optJSONObject("processes")));
             analysisText.setTextColor("OK".equals(level) ? Color.rgb(35, 117, 77) : Color.rgb(172, 109, 32));
         }
     }
@@ -635,6 +636,41 @@ public class MainActivity extends Activity {
             parts.add(messages.optString(i));
         }
         return join(parts, " ");
+    }
+
+    private String processSummary(JSONObject processes) {
+        if (processes == null) {
+            return "\n\nTop CPU: waiting for process details.\nTop RAM: waiting for process details.";
+        }
+
+        String cpu = processList(processes.optJSONArray("topCpu"), "cpu");
+        String memory = processList(processes.optJSONArray("topMemory"), "memory");
+        return "\n\nTop CPU\n" + cpu + "\n\nTop RAM\n" + memory;
+    }
+
+    private String processList(JSONArray values, String mode) {
+        if (values == null || values.length() == 0) {
+            return "No process details reported.";
+        }
+
+        List<String> rows = new ArrayList<>();
+        int limit = Math.min(values.length(), 5);
+        for (int i = 0; i < limit; i++) {
+            JSONObject entry = values.optJSONObject(i);
+            if (entry == null) {
+                continue;
+            }
+            String name = entry.optString("name", "Unknown");
+            int pid = entry.optInt("pid", 0);
+            if ("memory".equals(mode)) {
+                rows.add((i + 1) + ". " + name + " - " +
+                        oneDecimal.format(entry.optDouble("memoryPercent", 0)) + "% RAM, pid " + pid);
+            } else {
+                rows.add((i + 1) + ". " + name + " - " +
+                        oneDecimal.format(entry.optDouble("cpuPercent", 0)) + "% CPU, pid " + pid);
+            }
+        }
+        return rows.isEmpty() ? "No process details reported." : join(rows, "\n");
     }
 
     private String join(List<String> values, String separator) {

@@ -17,7 +17,7 @@ const HOST = process.env.MAC_STATUS_HOST || "0.0.0.0";
 const TOKEN_FILE = path.join(process.cwd(), ".mac-status-token");
 const MANIFEST_FILE = path.join(process.cwd(), "public", "update-manifest.json");
 const CLIENTS_FILE = path.join(process.cwd(), ".mac-status-clients.json");
-const VERSION = "1.1.0";
+const VERSION = "1.3.1";
 
 let lastCpuSnapshot = readCpuSnapshot();
 let cachedInternet = null;
@@ -144,6 +144,58 @@ async function readMemory() {
   }
 }
 
+function cleanCommand(command) {
+  const value = String(command || "").trim();
+  if (!value) {
+    return "Unknown";
+  }
+  const first = value.split(/\s+/)[0] || value;
+  return path.basename(first);
+}
+
+async function readProcesses() {
+  try {
+    const { stdout } = await execFileAsync("ps", ["-axo", "pid,pcpu,pmem,comm", "-r"], { timeout: 2500 });
+    const rows = stdout
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((line) => {
+        const match = line.trim().match(/^(\d+)\s+([\d.]+)\s+([\d.]+)\s+(.+)$/);
+        if (!match) {
+          return null;
+        }
+        return {
+          pid: Number.parseInt(match[1], 10),
+          cpuPercent: Number.parseFloat(Number.parseFloat(match[2]).toFixed(1)),
+          memoryPercent: Number.parseFloat(Number.parseFloat(match[3]).toFixed(1)),
+          name: cleanCommand(match[4]),
+          command: match[4].trim()
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      topCpu: rows
+        .slice()
+        .sort((a, b) => b.cpuPercent - a.cpuPercent)
+        .slice(0, 5),
+      topMemory: rows
+        .slice()
+        .sort((a, b) => b.memoryPercent - a.memoryPercent)
+        .slice(0, 5),
+      source: "ps"
+    };
+  } catch (error) {
+    return {
+      topCpu: [],
+      topMemory: [],
+      source: "ps",
+      error: error.message
+    };
+  }
+}
+
 function networkAddresses() {
   const interfaces = os.networkInterfaces();
   const addresses = [];
@@ -257,7 +309,12 @@ function summarize(status) {
 }
 
 async function buildStatus() {
-  const [battery, internet, memory] = await Promise.all([readBattery(), readInternet(), readMemory()]);
+  const [battery, internet, memory, processes] = await Promise.all([
+    readBattery(),
+    readInternet(),
+    readMemory(),
+    readProcesses()
+  ]);
   const status = {
     app: "Mac Status Link",
     version: VERSION,
@@ -276,6 +333,7 @@ async function buildStatus() {
     network: {
       addresses: networkAddresses()
     },
+    processes,
     server: {
       host: HOST,
       port: PORT

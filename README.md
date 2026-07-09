@@ -71,6 +71,8 @@ Version `1.3.0` starts a foreground notification service from the Android app. T
 
 The Android app uses a colorful dashboard layout with a status header, tinted metric panels, and prominent update/refresh actions.
 
+Version `1.3.1` expands the Analysis card. It keeps the short health summary at the top, then lists the top CPU and RAM processes reported by the Mac status service.
+
 The notification service also checks the update manifest every 15 minutes after a successful Mac status poll. When the manifest advertises a newer `latestVersionCode`, Android shows an update notification with an `Update` action.
 
 ## Update Manifest
