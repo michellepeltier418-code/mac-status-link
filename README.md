@@ -75,6 +75,15 @@ Version `1.3.1` expands the Analysis card. It keeps the short health summary at 
 
 Version `1.3.2` keeps the Connection card compact by default. It shows the saved endpoint and status, while the endpoint and token fields stay hidden unless `Edit Connection` is opened.
 
+Version `1.3.3` adds stable endpoint support for away-from-laptop use. The Mac service reports stable endpoint candidates from:
+
+- `MAC_STATUS_PUBLIC_URL`, for a manually configured tunnel URL such as ngrok or Cloudflare Tunnel.
+- Tailscale MagicDNS or Tailscale IP, when the `tailscale` CLI is installed and signed in on the Mac.
+
+The Android app shows the recommended stable endpoint in the compact Connection card and offers `Use Stable Endpoint` when one is available.
+
+You do not need to buy a server for the recommended setup. Tailscale Personal is free for personal use, but both the Mac and phone need Tailscale installed and signed into the same tailnet. Cloudflare Tunnel and ngrok can also work, but they require their own account setup, and Cloudflare public hostnames commonly require a domain.
+
 The notification service also checks the update manifest every 15 minutes after a successful Mac status poll. When the manifest advertises a newer `latestVersionCode`, Android shows an update notification with an `Update` action.
 
 ## Update Manifest

@@ -17,7 +17,7 @@ const HOST = process.env.MAC_STATUS_HOST || "0.0.0.0";
 const TOKEN_FILE = path.join(process.cwd(), ".mac-status-token");
 const MANIFEST_FILE = path.join(process.cwd(), "public", "update-manifest.json");
 const CLIENTS_FILE = path.join(process.cwd(), ".mac-status-clients.json");
-const VERSION = "1.3.1";
+const VERSION = "1.3.3";
 
 let lastCpuSnapshot = readCpuSnapshot();
 let cachedInternet = null;
@@ -211,6 +211,52 @@ function networkAddresses() {
   return addresses;
 }
 
+async function stableEndpoints() {
+  const endpoints = [];
+  const configuredUrl = String(process.env.MAC_STATUS_PUBLIC_URL || "").trim();
+  if (configuredUrl) {
+    endpoints.push({
+      type: "configured",
+      label: "Configured public URL",
+      url: configuredUrl,
+      note: "Set with MAC_STATUS_PUBLIC_URL."
+    });
+  }
+
+  try {
+    const { stdout } = await execFileAsync("tailscale", ["status", "--json"], { timeout: 2500 });
+    const status = JSON.parse(stdout);
+    const dnsName = String(status.Self && status.Self.DNSName ? status.Self.DNSName : "").replace(/\.$/, "");
+    if (dnsName) {
+      endpoints.push({
+        type: "tailscale-magicdns",
+        label: "Tailscale MagicDNS",
+        url: `http://${dnsName}:${PORT}`,
+        note: "Requires Tailscale on the phone and Mac, signed into the same tailnet."
+      });
+    }
+  } catch (_error) {
+    // Tailscale is optional.
+  }
+
+  try {
+    const { stdout } = await execFileAsync("tailscale", ["ip", "-4"], { timeout: 2500 });
+    const ip = stdout.trim().split(/\s+/)[0];
+    if (ip) {
+      endpoints.push({
+        type: "tailscale-ip",
+        label: "Tailscale IP",
+        url: `http://${ip}:${PORT}`,
+        note: "Stable while Tailscale is installed; MagicDNS is easier to read when available."
+      });
+    }
+  } catch (_error) {
+    // Tailscale is optional.
+  }
+
+  return endpoints;
+}
+
 function httpsProbe(url) {
   return new Promise((resolve, reject) => {
     const started = Date.now();
@@ -309,11 +355,12 @@ function summarize(status) {
 }
 
 async function buildStatus() {
-  const [battery, internet, memory, processes] = await Promise.all([
+  const [battery, internet, memory, processes, stable] = await Promise.all([
     readBattery(),
     readInternet(),
     readMemory(),
-    readProcesses()
+    readProcesses(),
+    stableEndpoints()
   ]);
   const status = {
     app: "Mac Status Link",
@@ -331,7 +378,9 @@ async function buildStatus() {
     battery,
     internet,
     network: {
-      addresses: networkAddresses()
+      addresses: networkAddresses(),
+      stableEndpoints: stable,
+      recommendedEndpoint: stable.length ? stable[0].url : null
     },
     processes,
     server: {

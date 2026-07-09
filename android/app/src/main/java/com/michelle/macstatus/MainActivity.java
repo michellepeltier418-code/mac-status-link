@@ -64,8 +64,10 @@ public class MainActivity extends Activity {
     private EditText tokenInput;
     private LinearLayout connectionDetails;
     private TextView endpointSummaryText;
+    private TextView stableEndpointText;
     private Button editConnectionButton;
     private Button saveConnectionButton;
+    private Button useStableEndpointButton;
     private TextView heroStatusText;
     private TextView connectionText;
     private TextView updatedText;
@@ -82,6 +84,7 @@ public class MainActivity extends Activity {
     private ProgressBar memoryBar;
     private volatile String configuredEndpoint = "";
     private volatile String configuredToken = "";
+    private volatile String recommendedStableEndpoint = "";
     private boolean connectionDetailsVisible;
 
     private final DecimalFormat oneDecimal = new DecimalFormat("0.0");
@@ -153,6 +156,10 @@ public class MainActivity extends Activity {
         endpointSummaryText.setPadding(0, dp(8), 0, dp(8));
         config.addView(endpointSummaryText);
 
+        stableEndpointText = text("Stable endpoint: not detected yet.", 13, COLOR_MUTED, Typeface.NORMAL);
+        stableEndpointText.setPadding(0, 0, 0, dp(8));
+        config.addView(stableEndpointText);
+
         connectionDetails = new LinearLayout(this);
         connectionDetails.setOrientation(LinearLayout.VERTICAL);
         connectionDetails.setVisibility(View.GONE);
@@ -199,7 +206,13 @@ public class MainActivity extends Activity {
         editConnectionButton.setText("Edit Connection");
         styleButton(editConnectionButton, Color.rgb(240, 253, 250), COLOR_TEAL);
         editConnectionButton.setOnClickListener(view -> setConnectionDetailsVisible(!connectionDetailsVisible));
+        useStableEndpointButton = new Button(this);
+        useStableEndpointButton.setText("Use Stable Endpoint");
+        styleButton(useStableEndpointButton, Color.rgb(236, 253, 245), COLOR_GREEN);
+        useStableEndpointButton.setVisibility(View.GONE);
+        useStableEndpointButton.setOnClickListener(view -> useRecommendedStableEndpoint());
         actions.addView(refreshButton);
+        actions.addView(useStableEndpointButton);
         actions.addView(editConnectionButton);
         actions.addView(saveConnectionButton);
         config.addView(actions);
@@ -376,6 +389,21 @@ public class MainActivity extends Activity {
             return;
         }
         endpointSummaryText.setText("Endpoint: " + endpoint);
+    }
+
+    private void useRecommendedStableEndpoint() {
+        String endpoint = recommendedStableEndpoint == null ? "" : recommendedStableEndpoint.trim();
+        if (endpoint.isEmpty()) {
+            return;
+        }
+        endpointInput.setText(endpoint);
+        configuredEndpoint = endpoint;
+        updateEndpointSummary();
+        saveSettingsFromInputs();
+        updateConnection("Stable endpoint saved. Checking now...", false);
+        startNotificationService();
+        fetchOnce();
+        startPolling();
     }
 
     private void requestNotificationPermissionIfNeeded() {
@@ -601,7 +629,9 @@ public class MainActivity extends Activity {
             internetText.setTextColor(Color.rgb(172, 40, 40));
         }
 
-        networkText.setText(networkSummary(json.optJSONObject("network")));
+        JSONObject network = json.optJSONObject("network");
+        networkText.setText(networkSummary(network));
+        renderStableEndpoint(network);
 
         JSONObject analysis = json.optJSONObject("analysis");
         if (analysis != null) {
@@ -670,6 +700,25 @@ public class MainActivity extends Activity {
             }
         }
         return join(parts, "\n");
+    }
+
+    private void renderStableEndpoint(JSONObject network) {
+        String recommended = network == null ? "" : network.optString("recommendedEndpoint", "");
+        recommendedStableEndpoint = recommended == null ? "" : recommended.trim();
+
+        if (recommendedStableEndpoint.isEmpty()) {
+            stableEndpointText.setText("Stable endpoint: not detected. Use Tailscale or MAC_STATUS_PUBLIC_URL for away-from-laptop access.");
+            if (useStableEndpointButton != null) {
+                useStableEndpointButton.setVisibility(View.GONE);
+            }
+            return;
+        }
+
+        stableEndpointText.setText("Stable endpoint: " + recommendedStableEndpoint);
+        boolean alreadyUsing = configuredEndpoint != null && configuredEndpoint.trim().equals(recommendedStableEndpoint);
+        if (useStableEndpointButton != null) {
+            useStableEndpointButton.setVisibility(alreadyUsing ? View.GONE : View.VISIBLE);
+        }
     }
 
     private String joinMessages(JSONArray messages) {

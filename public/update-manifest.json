@@ -1,11 +1,11 @@
 {
   "appName": "Mac Status Link",
   "packageName": "com.michelle.macstatus",
-  "latestVersionCode": 7,
-  "latestVersionName": "1.3.2",
+  "latestVersionCode": 8,
+  "latestVersionName": "1.3.3",
   "manifestUrl": "https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main",
-  "apkUrl": "https://github.com/michellepeltier418-code/mac-status-link/releases/download/v1.3.2/MacStatusLink-1.3.2.apk",
-  "sha256": "14d2ab87ca77848410084de0e8f2b99a5f2a65562f7615403981a57091ebf957",
+  "apkUrl": "https://github.com/michellepeltier418-code/mac-status-link/releases/download/v1.3.3/MacStatusLink-1.3.3.apk",
+  "sha256": "f353b3a07b9c08d5f9ecd7d0d7f0a2f45d5719f2544285e4d2252587319b87d6",
   "releaseNotes": [
     "Adds a live notification shade summary for battery, CPU, RAM, internet, and analysis.",
     "Adds an offline alert when the phone can no longer reach the Mac after a successful connection.",
@@ -16,7 +16,8 @@
     "Moves APK releases and the canonical update manifest to GitHub.",
     "Refreshes the app with a colorful dashboard header, tinted metric cards, and stronger action buttons.",
     "Adds deeper Analysis details showing the top CPU and RAM processes reported by the Mac.",
-    "Keeps Connection compact by default and hides endpoint/token fields unless editing or reconnecting."
+    "Keeps Connection compact by default and hides endpoint/token fields unless editing or reconnecting.",
+    "Adds stable endpoint detection for Tailscale and MAC_STATUS_PUBLIC_URL so away-from-laptop access can avoid changing LAN IPs."
   ],
   "publishedAt": "2026-07-08T00:00:00-07:00"
 }
