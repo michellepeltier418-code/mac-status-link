@@ -1,0 +1,15 @@
+{
+  "appName": "Mac Status Link",
+  "packageName": "com.michelle.macstatus",
+  "latestVersionCode": 2,
+  "latestVersionName": "1.1.0",
+  "apkUrl": "https://tmpfiles.org/dl/1783563526.d9e2276e85c4f496/wswV30YefGhn/macstatuslink.apk",
+  "sha256": "2e5e157e0fad986f325206bbb952d96c01223027adaa02b06a72cc964d569ca9",
+  "releaseNotes": [
+    "Adds a live notification shade summary for battery, CPU, RAM, internet, and analysis.",
+    "Adds an offline alert when the phone can no longer reach the Mac after a successful connection.",
+    "Adds a Mac companion app and live update manifest endpoint.",
+    "Adds an Updates card that checks the live manifest from the app."
+  ],
+  "publishedAt": "2026-07-08T00:00:00-07:00"
+}

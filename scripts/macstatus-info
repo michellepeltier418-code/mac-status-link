@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec "/Users/michelle/Documents/Codex/2026-07-08-make-an-app-for-my-blu/scripts/show-connection-info.sh"

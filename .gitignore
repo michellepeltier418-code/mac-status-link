@@ -1,0 +1,12 @@
+.gradle/
+.mac-status-token
+.mac-status-clients.json
+.tooling/
+android/.gradle/
+android/build/
+android/app/build/
+dist/
+server.log
+server.err.log
+*.jks
+*.apk

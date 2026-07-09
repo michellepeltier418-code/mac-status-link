@@ -1,0 +1,10 @@
+{
+  "name": "mac-status-link",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MacBook companion status service and Android APK client.",
+  "scripts": {
+    "serve": "node server/mac-status-server.js",
+    "build:apk": "scripts/build-apk.sh"
+  }
+}
