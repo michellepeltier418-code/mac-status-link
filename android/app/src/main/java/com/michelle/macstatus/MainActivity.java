@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
     private TextView endpointSummaryText;
     private TextView stableEndpointText;
     private LinearLayout stableEndpointButtons;
+    private Button connectionToggleButton;
     private Button editConnectionButton;
     private Button saveConnectionButton;
     private Button useStableEndpointButton;
@@ -157,14 +158,39 @@ public class MainActivity extends Activity {
         endpointSummaryText.setPadding(0, dp(8), 0, dp(8));
         config.addView(endpointSummaryText);
 
-        stableEndpointText = text("Stable endpoint: not detected yet.", 13, COLOR_MUTED, Typeface.NORMAL);
+        stableEndpointText = text("Stable endpoints available when you expand.", 13, COLOR_MUTED, Typeface.NORMAL);
         stableEndpointText.setPadding(0, 0, 0, dp(8));
+        stableEndpointText.setVisibility(View.GONE);
         config.addView(stableEndpointText);
 
         stableEndpointButtons = new LinearLayout(this);
         stableEndpointButtons.setOrientation(LinearLayout.VERTICAL);
         stableEndpointButtons.setVisibility(View.GONE);
         config.addView(stableEndpointButtons);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(Gravity.END);
+        actions.setPadding(0, dp(10), 0, 0);
+        Button refreshButton = new Button(this);
+        refreshButton.setText("Refresh");
+        styleButton(refreshButton, Color.rgb(219, 234, 254), COLOR_BLUE);
+        refreshButton.setOnClickListener(view -> fetchOnce());
+        connectionToggleButton = new Button(this);
+        connectionToggleButton.setText("Show Options");
+        styleButton(connectionToggleButton, Color.rgb(240, 253, 250), COLOR_TEAL);
+        connectionToggleButton.setOnClickListener(view -> setConnectionDetailsVisible(!connectionDetailsVisible));
+        editConnectionButton = new Button(this);
+        editConnectionButton.setText("Edit Connection");
+        styleButton(editConnectionButton, Color.rgb(240, 253, 250), COLOR_TEAL);
+        editConnectionButton.setOnClickListener(view -> setConnectionDetailsVisible(!connectionDetailsVisible));
+        useStableEndpointButton = new Button(this);
+        useStableEndpointButton.setText("Use Stable Endpoint");
+        styleButton(useStableEndpointButton, Color.rgb(236, 253, 245), COLOR_GREEN);
+        useStableEndpointButton.setVisibility(View.GONE);
+        useStableEndpointButton.setOnClickListener(view -> useRecommendedStableEndpoint());
+        actions.addView(refreshButton);
+        actions.addView(connectionToggleButton);
+        config.addView(actions);
 
         connectionDetails = new LinearLayout(this);
         connectionDetails.setOrientation(LinearLayout.VERTICAL);
@@ -189,9 +215,9 @@ public class MainActivity extends Activity {
         tokenParams.topMargin = dp(8);
         connectionDetails.addView(tokenInput, tokenParams);
 
-        LinearLayout actions = new LinearLayout(this);
-        actions.setGravity(Gravity.END);
-        actions.setPadding(0, dp(10), 0, 0);
+        LinearLayout detailsActions = new LinearLayout(this);
+        detailsActions.setGravity(Gravity.END);
+        detailsActions.setPadding(0, dp(10), 0, 0);
         saveConnectionButton = new Button(this);
         saveConnectionButton.setText("Save");
         styleButton(saveConnectionButton, COLOR_BLUE, Color.WHITE);
@@ -204,24 +230,10 @@ public class MainActivity extends Activity {
             startPolling();
             setConnectionDetailsVisible(false);
         });
-        Button refreshButton = new Button(this);
-        refreshButton.setText("Refresh");
-        styleButton(refreshButton, Color.rgb(219, 234, 254), COLOR_BLUE);
-        refreshButton.setOnClickListener(view -> fetchOnce());
-        editConnectionButton = new Button(this);
-        editConnectionButton.setText("Edit Connection");
-        styleButton(editConnectionButton, Color.rgb(240, 253, 250), COLOR_TEAL);
-        editConnectionButton.setOnClickListener(view -> setConnectionDetailsVisible(!connectionDetailsVisible));
-        useStableEndpointButton = new Button(this);
-        useStableEndpointButton.setText("Use Stable Endpoint");
-        styleButton(useStableEndpointButton, Color.rgb(236, 253, 245), COLOR_GREEN);
-        useStableEndpointButton.setVisibility(View.GONE);
-        useStableEndpointButton.setOnClickListener(view -> useRecommendedStableEndpoint());
-        actions.addView(refreshButton);
-        actions.addView(useStableEndpointButton);
-        actions.addView(editConnectionButton);
-        actions.addView(saveConnectionButton);
-        config.addView(actions);
+        detailsActions.addView(useStableEndpointButton);
+        detailsActions.addView(editConnectionButton);
+        detailsActions.addView(saveConnectionButton);
+        connectionDetails.addView(detailsActions);
 
         connectionText = text("Not connected yet.", 14, COLOR_MUTED, Typeface.NORMAL);
         connectionText.setPadding(0, dp(8), 0, 0);
@@ -380,21 +392,33 @@ public class MainActivity extends Activity {
         if (connectionDetails != null) {
             connectionDetails.setVisibility(visible ? View.VISIBLE : View.GONE);
         }
+        if (stableEndpointText != null) {
+            stableEndpointText.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+        if (stableEndpointButtons != null) {
+            stableEndpointButtons.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
         if (editConnectionButton != null) {
             editConnectionButton.setText(visible ? "Hide Details" : "Edit Connection");
         }
+        if (connectionToggleButton != null) {
+            connectionToggleButton.setText(visible ? "Hide Options" : "Show Options");
+        }
         if (saveConnectionButton != null) {
             saveConnectionButton.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+        if (useStableEndpointButton != null) {
+            useStableEndpointButton.setVisibility(visible && recommendedStableEndpoint != null && !recommendedStableEndpoint.trim().isEmpty() ? View.VISIBLE : View.GONE);
         }
     }
 
     private void updateEndpointSummary() {
         String endpoint = configuredEndpoint == null ? "" : configuredEndpoint.trim();
         if (endpoint.isEmpty()) {
-            endpointSummaryText.setText("Endpoint: not set");
+            endpointSummaryText.setText("Current connection: not set");
             return;
         }
-        endpointSummaryText.setText("Endpoint: " + endpoint);
+        endpointSummaryText.setText("Current connection: " + endpoint);
     }
 
     private void useRecommendedStableEndpoint() {
@@ -722,7 +746,7 @@ public class MainActivity extends Activity {
         renderStableEndpointChoices(network);
 
         if (recommendedStableEndpoint.isEmpty()) {
-            stableEndpointText.setText("Stable endpoint: not detected. Use Tailscale or MAC_STATUS_PUBLIC_URL for away-from-laptop access.");
+            stableEndpointText.setText("Stable endpoint: not detected.");
             if (useStableEndpointButton != null) {
                 useStableEndpointButton.setVisibility(View.GONE);
             }
@@ -732,7 +756,7 @@ public class MainActivity extends Activity {
         stableEndpointText.setText("Stable endpoint: " + recommendedStableEndpoint);
         boolean alreadyUsing = configuredEndpoint != null && configuredEndpoint.trim().equals(recommendedStableEndpoint);
         if (useStableEndpointButton != null) {
-            useStableEndpointButton.setVisibility(alreadyUsing ? View.GONE : View.VISIBLE);
+            useStableEndpointButton.setVisibility(connectionDetailsVisible && !alreadyUsing ? View.VISIBLE : View.GONE);
         }
     }
 
