@@ -35,7 +35,6 @@ public class StatusNotificationService extends Service {
     private static final String PREFS = "mac_status_link";
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
-    private static final String GITHUB_MANIFEST_URL = "https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main";
     private static final String CHANNEL_STATUS = "mac_status_summary";
     private static final String CHANNEL_ALERTS = "mac_status_alerts";
     private static final String CHANNEL_UPDATES = "mac_status_updates";
@@ -156,7 +155,7 @@ public class StatusNotificationService extends Service {
         try {
             JSONObject manifest;
             try {
-                manifest = requestPublicJson(GITHUB_MANIFEST_URL);
+                manifest = requestPublicJson(UpdateConfig.GITHUB_MANIFEST_URL);
             } catch (Exception error) {
                 manifest = requestJson(endpoint, token, "/api/manifest");
             }

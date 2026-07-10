@@ -47,7 +47,6 @@ public class MainActivity extends Activity {
     private static final String PREFS = "mac_status_link";
     private static final String KEY_ENDPOINT = "endpoint";
     private static final String KEY_TOKEN = "token";
-    private static final String GITHUB_MANIFEST_URL = "https://api.github.com/repos/michellepeltier418-code/mac-status-link/contents/public/update-manifest.json?ref=main";
     private static final int COLOR_INK = Color.rgb(17, 24, 39);
     private static final int COLOR_MUTED = Color.rgb(82, 99, 118);
     private static final int COLOR_BLUE = Color.rgb(37, 99, 235);
@@ -550,7 +549,7 @@ public class MainActivity extends Activity {
         String token = configuredToken;
 
         try {
-            JSONObject manifest = requestPublicJson(GITHUB_MANIFEST_URL);
+            JSONObject manifest = requestPublicJson(UpdateConfig.GITHUB_MANIFEST_URL);
             mainHandler.post(() -> renderManifest(manifest));
         } catch (Exception error) {
             if (endpoint.isEmpty()) {
@@ -806,7 +805,7 @@ public class MainActivity extends Activity {
             String name = entry.optString("name", "network");
             Button button = new Button(this);
             button.setAllCaps(false);
-            button.setText("Last used Mac IP\nhttp://" + ip + ":" + 5178 + "\n" + name);
+            button.setText("Last known Mac LAN IP\nhttp://" + ip + ":" + 5178 + "\n" + name);
             styleButton(button, Color.rgb(239, 246, 255), COLOR_BLUE);
             LinearLayout.LayoutParams params = matchWrap();
             params.topMargin = dp(6);
