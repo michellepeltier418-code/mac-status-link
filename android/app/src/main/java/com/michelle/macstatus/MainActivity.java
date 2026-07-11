@@ -75,7 +75,9 @@ public class MainActivity extends Activity {
     private TextView batteryText;
     private TextView cpuText;
     private TextView memoryText;
+    private TextView temperatureText;
     private TextView internetText;
+    private TextView wifiText;
     private TextView networkText;
     private TextView analysisText;
     private TextView updatesText;
@@ -251,7 +253,9 @@ public class MainActivity extends Activity {
         memoryBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         memoryText = addMetric(root, "RAM", memoryBar, Color.rgb(255, 247, 237), COLOR_AMBER);
 
+        temperatureText = addSimple(root, "Device Temperature", Color.rgb(255, 247, 237), Color.rgb(234, 88, 12));
         internetText = addSimple(root, "Internet", Color.rgb(240, 253, 244), COLOR_GREEN);
+        wifiText = addSimple(root, "Wi-Fi", Color.rgb(236, 254, 255), Color.rgb(8, 145, 178));
         networkText = addSimple(root, "Mac Network", Color.rgb(245, 243, 255), Color.rgb(124, 58, 237));
         analysisText = addSimple(root, "Analysis", Color.rgb(255, 241, 242), COLOR_ROSE);
         updatesText = addUpdates(root);
@@ -656,6 +660,15 @@ public class MainActivity extends Activity {
                 bytes(memory == null ? 0 : memory.optLong("usedBytes", 0)) + " of " +
                 bytes(memory == null ? 0 : memory.optLong("totalBytes", 0)));
 
+        JSONObject temperature = json.optJSONObject("temperature");
+        if (temperature != null && temperature.optBoolean("available", false)) {
+            temperatureText.setText(oneDecimal.format(temperature.optDouble("celsius", 0)) + " C / " +
+                    oneDecimal.format(temperature.optDouble("fahrenheit", 0)) + " F, " +
+                    temperature.optString("sensor", "device") + " sensor");
+        } else {
+            temperatureText.setText("Temperature sensor unavailable.");
+        }
+
         JSONObject internet = json.optJSONObject("internet");
         if (internet != null && internet.optBoolean("online", false)) {
             internetText.setText("Online, " + internet.optInt("latencyMs", 0) + " ms probe");
@@ -667,6 +680,15 @@ public class MainActivity extends Activity {
         }
 
         JSONObject network = json.optJSONObject("network");
+        JSONObject wifi = network == null ? null : network.optJSONObject("wifi");
+        if (wifi != null && wifi.optBoolean("connected", false)) {
+            wifiText.setText(wifi.optString("ssid", "Unknown network") + " - " +
+                    wifi.optString("signalQuality", "Unknown") + " " + wifi.optInt("signalPercent", 0) + "% (" +
+                    wifi.optInt("rssiDbm", 0) + " dBm)\nChannel " + wifi.optString("channel", "--") +
+                    ", transmit " + wifi.optInt("transmitRateMbps", 0) + " Mbps");
+        } else {
+            wifiText.setText("Wi-Fi disconnected or details unavailable.");
+        }
         networkText.setText(networkSummary(network));
         renderStableEndpoint(network);
 

@@ -229,6 +229,9 @@ public class StatusNotificationService extends Service {
         JSONObject cpu = status.optJSONObject("cpu");
         JSONObject memory = status.optJSONObject("memory");
         JSONObject internet = status.optJSONObject("internet");
+        JSONObject temperature = status.optJSONObject("temperature");
+        JSONObject network = status.optJSONObject("network");
+        JSONObject wifi = network == null ? null : network.optJSONObject("wifi");
 
         String batteryText = battery == null || !battery.optBoolean("present", false)
                 ? "Battery --"
@@ -237,7 +240,15 @@ public class StatusNotificationService extends Service {
         String ramText = "RAM " + oneDecimal.format(memory == null ? 0 : memory.optDouble("percentUsed", 0)) + "%";
         String netText = internet != null && internet.optBoolean("online", false) ? "Internet online" : "Internet issue";
 
-        return batteryText + " | " + cpuText + " | " + ramText + " | " + netText;
+        String tempText = temperature != null && temperature.optBoolean("available", false)
+                ? "Temp " + oneDecimal.format(temperature.optDouble("fahrenheit", 0)) + " F / " +
+                oneDecimal.format(temperature.optDouble("celsius", 0)) + " C"
+                : "Temp --";
+        String wifiText = wifi != null && wifi.optBoolean("connected", false)
+                ? "Wi-Fi " + wifi.optString("signalQuality", "--")
+                : "Wi-Fi off";
+
+        return batteryText + " | " + cpuText + " | " + ramText + " | " + tempText + " | " + wifiText + " | " + netText;
     }
 
     private String detailLine(JSONObject status) {

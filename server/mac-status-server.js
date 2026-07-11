@@ -17,7 +17,7 @@ const HOST = process.env.MAC_STATUS_HOST || "0.0.0.0";
 const TOKEN_FILE = path.join(process.cwd(), ".mac-status-token");
 const MANIFEST_FILE = path.join(process.cwd(), "public", "update-manifest.json");
 const CLIENTS_FILE = path.join(process.cwd(), ".mac-status-clients.json");
-const VERSION = "1.3.3";
+const VERSION = "1.3.9";
 
 let lastCpuSnapshot = readCpuSnapshot();
 let cachedInternet = null;
@@ -96,6 +96,67 @@ async function readBattery() {
       timeRemaining: null,
       raw: error.message
     };
+  }
+}
+
+async function readTemperature() {
+  try {
+    const { stdout } = await execFileAsync("ioreg", ["-r", "-n", "AppleSmartBattery"], { timeout: 2000 });
+    const match = stdout.match(/"Temperature"\s*=\s*(\d+)/);
+    if (!match) {
+      throw new Error("No temperature sensor value was reported.");
+    }
+    const celsius = Number.parseInt(match[1], 10) / 100;
+    return {
+      available: true,
+      celsius: Number(celsius.toFixed(1)),
+      fahrenheit: Number((celsius * 9 / 5 + 32).toFixed(1)),
+      sensor: "Battery",
+      source: "AppleSmartBattery"
+    };
+  } catch (error) {
+    return { available: false, celsius: null, fahrenheit: null, sensor: "Unavailable", source: "ioreg", error: error.message };
+  }
+}
+
+function wifiSignalPercent(rssi) {
+  return Math.max(0, Math.min(100, Math.round((rssi + 100) * 2)));
+}
+
+function wifiSignalQuality(percent) {
+  if (percent >= 80) return "Excellent";
+  if (percent >= 60) return "Good";
+  if (percent >= 40) return "Fair";
+  return "Weak";
+}
+
+async function readWifi() {
+  const airport = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport";
+  try {
+    const { stdout } = await execFileAsync(airport, ["-I"], { timeout: 2500 });
+    const values = {};
+    stdout.split("\n").forEach((line) => {
+      const match = line.match(/^\s*([^:]+):\s*(.*)$/);
+      if (match) values[match[1].trim()] = match[2].trim();
+    });
+    const connected = values.state === "running" && Boolean(values.SSID);
+    const rssi = Number.parseInt(values.agrCtlRSSI, 10);
+    const noise = Number.parseInt(values.agrCtlNoise, 10);
+    const signalPercent = Number.isFinite(rssi) ? wifiSignalPercent(rssi) : null;
+    return {
+      connected,
+      ssid: connected ? values.SSID : null,
+      rssiDbm: Number.isFinite(rssi) ? rssi : null,
+      noiseDbm: Number.isFinite(noise) ? noise : null,
+      signalPercent,
+      signalQuality: signalPercent === null ? "Unknown" : wifiSignalQuality(signalPercent),
+      channel: values.channel || null,
+      transmitRateMbps: Number.parseInt(values.lastTxRate, 10) || null,
+      interface: "en0",
+      source: "airport"
+    };
+  } catch (error) {
+    return { connected: false, ssid: null, signalPercent: null, signalQuality: "Unavailable", source: "airport", error: error.message };
   }
 }
 
@@ -355,12 +416,14 @@ function summarize(status) {
 }
 
 async function buildStatus() {
-  const [battery, internet, memory, processes, stable] = await Promise.all([
+  const [battery, internet, memory, processes, stable, temperature, wifi] = await Promise.all([
     readBattery(),
     readInternet(),
     readMemory(),
     readProcesses(),
-    stableEndpoints()
+    stableEndpoints(),
+    readTemperature(),
+    readWifi()
   ]);
   const status = {
     app: "Mac Status Link",
@@ -376,9 +439,11 @@ async function buildStatus() {
     },
     memory,
     battery,
+    temperature,
     internet,
     network: {
       addresses: networkAddresses(),
+      wifi,
       stableEndpoints: stable,
       recommendedEndpoint: stable.length ? stable[0].url : null
     },
